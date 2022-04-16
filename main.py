@@ -1,12 +1,15 @@
-from typing import Tuple, Any
-import threading
+import itertools
+from argparse import ArgumentParser, Namespace
+from multiprocessing.pool import ThreadPool
+from typing import Tuple
+
 import numpy as np
+import pandas as pd
 import scipy.stats as stats
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
-import pandas as pd
-import itertools
-from argparse import ArgumentParser, Namespace
+
+THREAD_NUM = 6
 
 
 def read_data(data_path: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -66,9 +69,6 @@ def cross_validate(features: np.ndarray, y: np.ndarray, k: int, debug: bool = Fa
         train_features = np.delete(features, test, axis=0)
         train_labels = np.delete(y, test, axis=0)
         reg.fit(train_features, train_labels)
-        # root_mse = mean_squared_error(train_labels, reg.predict(train_features), squared=False)
-        # print('Root MSE: ', root_mse)
-        # print('R Squared: ', reg.score(train_features, train_labels))
         if debug:
             print(reg.predict([features[test]])[0], y[test], sep='\t')
         scores[test, 0] = reg.score(train_features, train_labels)
@@ -93,21 +93,18 @@ def forward_search(features: np.ndarray, y: np.ndarray, k: int, f: int, feature_
             scores = cross_validate(features[:, thread_local_mask], y, k)
             all_scores[added_feature_pos] = scores
 
-            # multi-thread
-        for j in range(n):
-            searching_threads.append(threading.Thread(target=search_feature, args=[j]))
-            searching_threads[-1].start()
-        for j in range(n):
-            searching_threads[j].join()
+        # multi-thread
+        pool = ThreadPool(THREAD_NUM)
+        pool.map(search_feature, range(n))
         best_score_pos = np.argmax(all_scores[:, :, 0].sum(axis=1))
         mask[best_score_pos] = True
         print(
-            'Forward search {:2d}/{:2d}, add feature {}'
+            'Forward search {:2d}/{:2d}, add feature {} \n\t'
             'best train set r2 square: {:.3f}, '
             'with train / test root mse: {:.3f}/{:.3f}'.format(i + 1, f, feature_map[best_score_pos],
-                                                               all_scores[best_score_pos, :, 0].sum(),
-                                                               all_scores[best_score_pos, :, 1].sum(),
-                                                               all_scores[best_score_pos, :, 2].sum()))
+                                                               all_scores[best_score_pos, :, 0].mean(),
+                                                               all_scores[best_score_pos, :, 1].mean(),
+                                                               all_scores[best_score_pos, :, 2].mean()))
     feature_map = feature_map[mask]
     return features[:, mask], feature_map
 
@@ -129,9 +126,8 @@ if __name__ == '__main__':
                         help='The path to the raw data (default: data.csv).')
     parser.add_argument('--window-size', metavar='K', type=int, default=3,
                         help='Size of the time sliding window K (default: 3).')
-    parser.add_argument('--min-pearson', metavar='r', type=float, default=0.99,
+    parser.add_argument('--min-pearson', metavar='r', type=float, default=0.9,
                         help='Minimum Pearson correlation coefficient between feature and GER.')
-    parser.add_argument('--feature-size', metavar='F', type=int, default=15,
+    parser.add_argument('--feature-size', metavar='F', type=int, default=10,
                         help='Size of generated features (default: 20).')
-    # parser.add_argument('--')
     main(parser.parse_args())
