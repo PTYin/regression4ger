@@ -77,7 +77,8 @@ def cross_validate(features: np.ndarray, y: np.ndarray, k: int, debug: bool = Fa
     return scores
 
 
-def forward_search(features: np.ndarray, y: np.ndarray, k: int, f: int, feature_map: np.ndarray) -> np.ndarray:
+def forward_search(features: np.ndarray, y: np.ndarray, k: int, f: int, feature_map: np.ndarray) \
+        -> Tuple[np.ndarray, np.ndarray]:
     m, n = features.shape
     mask = np.zeros(n, dtype=bool)
     for i in range(f):
@@ -107,7 +108,8 @@ def forward_search(features: np.ndarray, y: np.ndarray, k: int, f: int, feature_
                                                                all_scores[best_score_pos, :, 0].sum(),
                                                                all_scores[best_score_pos, :, 1].sum(),
                                                                all_scores[best_score_pos, :, 2].sum()))
-    return features[:, mask]
+    feature_map = feature_map[mask]
+    return features[:, mask], feature_map
 
 
 def main(args: Namespace):
@@ -115,7 +117,8 @@ def main(args: Namespace):
     generated_features, feature_map = generate_features(raw, args.window_size, column_map)
     selected_features, feature_map = pearson_selection(generated_features, y, args.window_size, args.min_pearson,
                                                        feature_map)
-    searched_features = forward_search(selected_features, y, args.window_size, args.feature_size, feature_map)
+    searched_features, feature_map = forward_search(selected_features, y, args.window_size, args.feature_size,
+                                                    feature_map)
     cross_validate(searched_features, y, args.window_size, debug=True)
 
 
