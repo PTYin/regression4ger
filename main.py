@@ -31,9 +31,9 @@ def generate_features(raw: np.ndarray, k: int, column_map: np.ndarray) -> Tuple[
                              itertools.permutations(range(k * n), 2)):
         feature_map[j] = '{}/{}'.format(feature_map[num], feature_map[den])
     for j, ele in zip(range((k * n) ** 2, (k * n) ** 2 * 2), range((k * n) ** 2)):
-        feature_map[j] = '({})** 2'.format(feature_map[ele])
+        feature_map[j] = '[{}]** 2'.format(feature_map[ele])
     for j, ele in zip(range((k * n) ** 2 * 2, (k * n) ** 2 * 3), range((k * n) ** 2)):
-        feature_map[j] = 'ln({})'.format(feature_map[ele])
+        feature_map[j] = 'ln[{}]'.format(feature_map[ele])
 
     for i in range(k, m):
         feature = features[i]
@@ -56,6 +56,13 @@ def pearson_selection(features: np.ndarray, y: np.ndarray, k: int, r_min: int, f
     r = np.zeros(n)
     for j in range(n):
         r[j] = stats.pearsonr(features[k:, j], y[k:])[0]
+    print('-----------Pearson Correlation Coefficient-----------')
+    pre = 0
+    for cur in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]:
+        in_interval = np.sum((pre <= np.abs(r)) * (np.abs(r) < cur))
+        print('{:.1f}\t{:.1f}\t{:.2f}\t{}'.format(pre, cur, in_interval / n, in_interval))
+        pre = cur
+
     correlated_features = features[:, np.abs(r) > r_min]
     feature_map = feature_map[np.abs(r) > r_min]
     return correlated_features, feature_map
@@ -64,16 +71,20 @@ def pearson_selection(features: np.ndarray, y: np.ndarray, k: int, r_min: int, f
 def cross_validate(features: np.ndarray, y: np.ndarray, k: int, debug: bool = False):
     m, n = features.shape
     scores = np.zeros((m, 3))
+    if debug:
+        print('-----------Overall Experiment Result-----------')
+        print('R Square\tRMSE_train\tRMSE_test\tGER_pred\tGER_true')
     for test in range(k, m):
         reg = LinearRegression()
         train_features = np.delete(features, test, axis=0)
         train_labels = np.delete(y, test, axis=0)
         reg.fit(train_features, train_labels)
-        if debug:
-            print(reg.predict([features[test]])[0], y[test], sep='\t')
         scores[test, 0] = reg.score(train_features, train_labels)
         scores[test, 1] = mean_squared_error(train_labels, reg.predict(train_features), squared=False)
         scores[test, 2] = mean_squared_error([y[test]], reg.predict([features[test]]), squared=False)
+        if debug:
+            print('{:.6f}\t{:.6f}\t{:.6f}\t{:.6f}\t{:.3f}'.format(scores[test, 0], scores[test, 1], scores[test, 2],
+                                                                  reg.predict([features[test]])[0], y[test]))
     return scores
 
 
@@ -81,8 +92,9 @@ def forward_search(features: np.ndarray, y: np.ndarray, k: int, f: int, feature_
         -> Tuple[np.ndarray, np.ndarray]:
     m, n = features.shape
     mask = np.zeros(n, dtype=bool)
+    print('-----------Forward Search Result-----------')
+    print('RMSE_train\tRMSE_test')
     for i in range(f):
-        searching_threads = []
         all_scores = np.zeros((n, m, 3))
 
         def search_feature(added_feature_pos: int):
@@ -98,13 +110,15 @@ def forward_search(features: np.ndarray, y: np.ndarray, k: int, f: int, feature_
         pool.map(search_feature, range(n))
         best_score_pos = np.argmax(all_scores[:, :, 0].sum(axis=1))
         mask[best_score_pos] = True
-        print(
-            'Forward search {:2d}/{:2d}, add feature {} \n\t'
-            'best train set r2 square: {:.3f}, '
-            'with train / test root mse: {:.3f}/{:.3f}'.format(i + 1, f, feature_map[best_score_pos],
-                                                               all_scores[best_score_pos, :, 0].mean(),
-                                                               all_scores[best_score_pos, :, 1].mean(),
-                                                               all_scores[best_score_pos, :, 2].mean()))
+        print('{:.32f}\t{:.32f}'.format(all_scores[best_score_pos, :, 1].mean(),
+                                      all_scores[best_score_pos, :, 2].mean()))
+        # print(
+        #     'Forward search {:2d}/{:2d}, add feature {} \n\t'
+        #     'best train set r2 square: {:.3f}, '
+        #     'with train / test root mse: {:.3f}/{:.3f}'.format(i + 1, f, feature_map[best_score_pos],
+        #                                                        all_scores[best_score_pos, :, 0].mean(),
+        #                                                        all_scores[best_score_pos, :, 1].mean(),
+        #                                                        all_scores[best_score_pos, :, 2].mean()))
     feature_map = feature_map[mask]
     return features[:, mask], feature_map
 
