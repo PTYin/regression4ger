@@ -1,6 +1,6 @@
 # regression4ger
 
-曲阜师范大学数学学院毕业设计，使用线性回归 (Linear Regression) 预测中国高中教育毛入学率 (Gross Enrollment Rate, GER)，附带原始数据.
+曲阜师范大学数学专业毕业设计，使用线性回归 (Linear Regression) 预测中国高中教育毛入学率 (Gross Enrollment Rate, GER)，附带原始数据.
 
 ## 方法
 
@@ -20,11 +20,11 @@ python  main.py [-h] [-d DATA] [--window-size K] [--min-pearson r] [--feature-si
 
 ### 命令行参数说明
 
-> Predict GER (Gross Enrollment Rate) using linear regression.
->
-> optional arguments:
->   -h, --help        show this help message and exit
->   -d DATA           The path to the raw data (default: data.csv).
->   --window-size K   Size of the time sliding window K (default: 3).
->   --min-pearson r   Minimum Pearson correlation coefficient between feature and GER (default: 0.9).
->   --feature-size F  Size of generated features (default: 20).
+    Predict GER (Gross Enrollment Rate) using linear regression.
+
+    optional arguments:
+      -h, --help        show this help message and exit
+      -d DATA           The path to the raw data (default: data.csv).
+      --window-size K   Size of the time sliding window K (default: 3).
+      --min-pearson r   Minimum Pearson correlation coefficient between feature and GER (default: 0.9).
+      --feature-size F  Size of generated features (default: 20).
