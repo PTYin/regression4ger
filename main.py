@@ -141,7 +141,7 @@ if __name__ == '__main__':
     parser.add_argument('--window-size', metavar='K', type=int, default=3,
                         help='Size of the time sliding window K (default: 3).')
     parser.add_argument('--min-pearson', metavar='r', type=float, default=0.9,
-                        help='Minimum Pearson correlation coefficient between feature and GER.')
+                        help='Minimum Pearson correlation coefficient between feature and GER (default: 0.9).')
     parser.add_argument('--feature-size', metavar='F', type=int, default=10,
                         help='Size of generated features (default: 20).')
     main(parser.parse_args())
